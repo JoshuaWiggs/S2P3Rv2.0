@@ -112,7 +112,9 @@ def ws_units_func(u_cube, v_cube):
         raise ValueError("units do not match")
     return u_cube.units
 
-def main():
+def main(min_depth_lim, max_depth_lim,start_year,end_year,cmip_models,experiments,my_suffix,
+     my_suffix_windspeed_output,base_directory, domain_file,base_directory_containing_files_to_process,
+     base_output_directory,base_tmp_output_directory,directory_containing_land_sea_mask_files):
     ##################################
     # Other things that need to be defined, but probably not changed
     ##################################
@@ -125,7 +127,7 @@ def main():
     # df = pd.read_csv(domain_file,names=['lon','lat','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','depth'],delim_whitespace=True,skiprows=[0],dtype={'lon':float,'lat':float,'t1':float,'t2':float,'t3':float,'t4':float,'t5':float,'t6':float,'t7':float,'t8':float,'t9':float,'t10':float,'depth':float})
     fwidths=[8,8,6,6,6,6,6,6,6,6,6,6,8]
     print('reading in lats and lons from domain file')
-    df = pd.read_fwf(base_directory+'domain/'+domain_file,names=['lon','lat','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','depth'],widths = fwidths,
+    df = pd.read_fwf(base_directory+'/model/domain/'+domain_file,names=['lon','lat','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','depth'],widths = fwidths,
                     skiprows=[0],dtype={'lon':float,'lat':float,'t1':float,'t2':float,'t3':float,'t4':float,'t5':float,'t6':float,'t7':float,'t8':float,'t9':float,'t10':float,'depth':float},usecols=['lon','lat','depth'])
 
     print('completed reading in lats and lons from domain file')
@@ -156,12 +158,12 @@ def main():
 
             try:
                 os.mkdir(output_directory)
-            except:
+            except FileExistsError:
                 pass
 
             try:
                 os.mkdir(tmp_output_directory)
-            except:
+            except FileExistsError:
                 pass
 
             if len(glob.glob(output_directory+output_filename+'*.dat')) != 0:
@@ -233,7 +235,7 @@ def main():
                         if len(checking_file) == 0:
                             missing_files = missing_files + ' ' + checking_file
 
-                    if input_file_count == 8:
+                    if input_file_count == len(input_variables):
                         cubes = []
                         cube_data=[]
                         for k in range(len(input_variables)):
@@ -347,10 +349,12 @@ cmip_models = ['UKESM1-0-LL'] # note that this should match exactly the model na
 # experiments = ['historical','ssp119','ssp585'] # note that this shoudl match exactly the experiment name used in the filename
 #experiments = ['historical','ssp585'] # note that this shoudl match exactly the experiment name used in the filename
 experiments = ['ssp245'] # note that this shoudl match exactly the experiment name used in the filename
-my_suffix = 'r1i1p1f2_all.nc' #e.g. '_all.nc'
-my_suffix_windspeed_output = 'r1i1p1f2_all.nc' #e.g. '_all.nc'
+my_suffix = '_r1i1p1f2_all.nc' #e.g. '_all.nc'
+my_suffix_windspeed_output = '_r1i1p1f2_all.nc' #e.g. '_all.nc'
 
-base_directory = '/project/ciid/projects/WISERAP_Sunda_Shelf/'
+# location of source code
+base_directory = os.path.join(os.environ["HOME"],"code", "S2P3Rv2.0")
+
 domain_file = 's12_m2_s2_n2_h_map_SundaShelf.dat'
 # Note, the script will fail with the error 'OverflowError: cannot serialize a string larger than 2 GiB'
 # if this file is too big. For example, a global 4km dataste is too big, but 4km from 30S to 30N is OK
@@ -358,15 +362,16 @@ domain_file = 's12_m2_s2_n2_h_map_SundaShelf.dat'
 # pickle has a 2GB limit in python2
 
 
-#Specify where the ncep data is stored on your computer
-#directory_containing_files_to_process = '/data/NAS-ph290/ph290/cmip5/for_s2p3_rv2.0/merged/'
-# directory_containing_files_to_process = '/data/BatCaveNAS/ph290/ecmwf_20C/output/'
-base_directory_containing_files_to_process = '/data/ssd2/ph290/cmip6/'
-base_output_directory = '/data/ssd2/ph290/s2p3_met_processed/global_david_test/'
-# note doing temporary stuff on RAMdisk to speed things up
-base_tmp_output_directory = '/mnt/ramdisk/s2p3_tmp/'
+#Specify where the CMIP data is stored on your computer
+base_directory_containing_files_to_process = '/project/ciid/projects/WISERAP_Sunda_Shelf/'
+base_output_directory = '/project/ciid/projects/WISERAP_Sunda_Shelf/'
 
-directory_containing_land_sea_mask_files = '/project/champ/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/pi
+# not clear if need to use these or not 
+# note Exeter doing temporary stuff on RAMdisk to speed things up
+# using scratch here
+base_tmp_output_directory = '/scratch/fris/s2p3_temp/'
+
+directory_containing_land_sea_mask_files = '/project/champ/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/piControl/r1i1p1f2/fx/sftlf/gn/v20190705/'
 
 # call main programme
 main(min_depth_lim, max_depth_lim,start_year,end_year,cmip_models,experiments,my_suffix,
