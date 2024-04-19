@@ -59,7 +59,7 @@ def land_fill(mask_cube,cubes):
         data.append(cubes[i].data)
     ########## filling land points with nearest neighbour value ##########
     for i,dummy1 in enumerate(data):
-        print('processing ',i,' out of ',len(data),' variables')
+        print('processing ',i+1,' out of ',len(data),' variables')
         a = data[i][0,:,:].copy()
         x,y=np.mgrid[0:a.shape[0],0:a.shape[1]]
         xygood = np.array((x[~a.mask],y[~a.mask])).T
@@ -295,9 +295,9 @@ def main(min_depth_lim, max_depth_lim,start_year,end_year,cmip_models,experiment
                         znew[:,np.where(input_variables2 == 'psl')[0],:] /= 100.0
                         znew[:,np.where(input_variables2 == 'tas')[0],:] -= 273.15
                         print('writing met data out')
+                        progress_bar(0,len(sample_points_lat_lon['lon'].values))
                         for u,longitude_point in enumerate(sample_points_lat_lon['lon'].values):
                             latitude_point = sample_points_lat_lon['lat'].values[u]
-                            progress_bar(u,len(sample_points_lat_lon['lon'].values))
                             # for v,latitude_point in enumerate(sample_points_lat_lon['lat'].values[0:500]):
                             # delete.append(str(np.round(latitude_point,4))+str(np.round(longitude_point,4)))
                             # delete2.append(str(int(latitude_point*10000))+str(int(longitude_point*10000)))
@@ -318,62 +318,25 @@ def main(min_depth_lim, max_depth_lim,start_year,end_year,cmip_models,experiment
                             np.savetxt(tmp_output_directory+output_filename+'lat'+str(np.round(latitude_point,4))+'lon'+str(np.round(longitude_point,4))+'_'+str(year)+'.dat', df2[['day_number','wind_speed','wind_direction','tas','tas','psl','hurs','rsds','rlds']].values, fmt='%s%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f')
                             #units are wind_speed m/s, wind_direction degrees, clt (now redundant) %, tas deg C, psl hPa, hurs %
                             #approx values are:     1      0.50     41.25     39.44     26.28   1006.35     80.34
+                            progress_bar(u+1,len(sample_points_lat_lon['lon'].values))
+                        print(' ')
+                        print('done met data out')
                         # pool.close()
                         #tar and gzip the output files for each year:
                         os.chdir(tmp_output_directory)
                         names = [os.path.basename(x) for x in glob.glob(tmp_output_directory+'*.dat')]
-                        tar = tarfile.open('met_data_'+str(year)+'.tar.gz', 'w:gz')
+                        tar_name = f'met_data_{year}.tar.gz'
+                        tar_out = os.path.join(tmp_output_directory, tar_name)
+                        tar = tarfile.open(tar_out, 'w:gz', compresslevel=6)
                         for name in names:
                             tar.add(name)
                         tar.close()
                         #remove the files that have now been tar.gzped
                         [os.remove(f) for f in names]
+
                         os.chdir(cwd)
-                        shutil.move(tmp_output_directory+'met_data_'+str(year)+'.tar.gz',output_directory+'met_data_'+str(year)+'.tar.gz')
+                        tar_final = os.path.join(output_directory, tar_name)
+                        shutil.move(tar_out, tar_final)
                     else:
                         print('missing: '+missing_files)
 
-# top level script here, move into own file next
-##################################
-# things that may need to be edited
-##################################
-
-
-min_depth_lim = 4.0
-max_depth_lim = 50.0
-
-start_year = 2015
-end_year = 2100
-
-cmip_models = ['UKESM1-0-LL'] # note that this should match exactly the model name used in the filename
-# experiments = ['historical','ssp119','ssp585'] # note that this shoudl match exactly the experiment name used in the filename
-#experiments = ['historical','ssp585'] # note that this shoudl match exactly the experiment name used in the filename
-experiments = ['ssp245'] # note that this shoudl match exactly the experiment name used in the filename
-my_suffix = '_r1i1p1f2_all.nc' #e.g. '_all.nc'
-my_suffix_windspeed_output = '_r1i1p1f2_all.nc' #e.g. '_all.nc'
-
-# location of source code
-base_directory = os.path.join(os.environ["HOME"],"code", "S2P3Rv2.0")
-
-domain_file = 's12_m2_s2_n2_h_map_SundaShelf.dat'
-# Note, the script will fail with the error 'OverflowError: cannot serialize a string larger than 2 GiB'
-# if this file is too big. For example, a global 4km dataste is too big, but 4km from 30S to 30N is OK
-# The limitation is that the data has to be pickled to be run in a parallellised way, and currently
-# pickle has a 2GB limit in python2
-
-
-#Specify where the CMIP data is stored on your computer
-base_directory_containing_files_to_process = '/project/ciid/projects/WISERAP_Sunda_Shelf/'
-base_output_directory = '/project/ciid/projects/WISERAP_Sunda_Shelf/'
-
-# not clear if need to use these or not 
-# note Exeter doing temporary stuff on RAMdisk to speed things up
-# using scratch here
-base_tmp_output_directory = '/scratch/fris/s2p3_temp/'
-
-directory_containing_land_sea_mask_files = '/project/champ/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/piControl/r1i1p1f2/fx/sftlf/gn/v20190705/'
-
-# call main programme
-main(min_depth_lim, max_depth_lim,start_year,end_year,cmip_models,experiments,my_suffix,
-     my_suffix_windspeed_output,base_directory, domain_file,base_directory_containing_files_to_process,
-     base_output_directory,base_tmp_output_directory,directory_containing_land_sea_mask_files)
